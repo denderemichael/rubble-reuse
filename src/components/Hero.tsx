@@ -5,9 +5,9 @@ import { ArrowRight, Leaf, TrendingDown, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 // ✅ Import your hero images directly
-import hero1 from "../assets/images/Hero1.jpg";
-import hero2 from "../assets/images/hero2.jpg";
-import hero3 from "../assets/images/hero3.jpg";
+import hero1 from "/image/Hero1.jpg";
+import hero2 from "/image/Hero2.jpg";
+import hero3 from "/image/Hero3.jpg";
 
 const heroImages = [hero1, hero2, hero3];
 
