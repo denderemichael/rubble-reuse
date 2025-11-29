@@ -1,100 +1,66 @@
+import { useState, useEffect } from "react";
 import { Navbar } from "@/components/Navbar";
 import { MaterialCard } from "@/components/MaterialCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, SlidersHorizontal } from "lucide-react";
+import { Search, SlidersHorizontal, Loader2 } from "lucide-react";
+import Footer from "@/components/Footer";
+import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
 
 const NonMaterials = () => {
-  const materials = [
-    {
-      title: "River Sand",
-      category: "Sand",
-      condition: "New",
-      price: "$25",
-      location: "Harare",
-      distance: "3.2 km",
-      rating: 4.8,
-      co2Saved: "0 kg",
-      imageUrl: "/images/materials/River-sand.jpg",
-    },
-    {
-      title: "Red Clay Bricks",
-      category: "Bricks",
-      condition: "New",
-      price: "$0.35",
-      location: "Mbare",
-      distance: "4.5 km",
-      rating: 4.9,
-      co2Saved: "0 kg",
-      imageUrl: "/images/materials/RedClay-bricks.jpg",
-    },
-    {
-      title: "Crushed Stones",
-      category: "Aggregate",
-      condition: "New",
-      price: "$30",
-      location: "Borrowdale",
-      distance: "6.8 km",
-      rating: 4.7,
-      co2Saved: "0 kg",
-      imageUrl: "/images/materials/Crushed-stone.jpg",
-    },
-    {
-      title: "Cement Bags",
-      category: "Cement",
-      condition: "New",
-      price: "$8.50",
-      location: "Avondale",
-      distance: "2.1 km",
-      rating: 5.0,
-      co2Saved: "0 kg",
-      imageUrl: "/images/materials/Cement-bags.jpg",
-    },
-    {
-      title: "Roofing Tiles",
-      category: "Tiles",
-      condition: "New",
-      price: "$2.50",
-      location: "Mount Pleasant",
-      distance: "5.3 km",
-      rating: 4.8,
-      co2Saved: "0 kg",
-      imageUrl: "/images/materials/Roofing-tiles.jpg",
-    },
-    {
-      title: "Paving Tiles",
-      category: "Tiles",
-      condition: "New",
-      price: "$4.00",
-      location: "Eastlea",
-      distance: "4.7 km",
-      rating: 4.6,
-      co2Saved: "0 kg",
-      imageUrl: "/images/materials/Paving-tiles.jpg",
-    },
-    {
-      title: "Cement Tiles",
-      category: "Tiles",
-      condition: "New",
-      price: "$3.20",
-      location: "Waterfalls",
-      distance: "7.2 km",
-      rating: 4.7,
-      co2Saved: "0 kg",
-      imageUrl: "/images/materials/Cement-tiles.jpg",
-    },
-    {
-      title: "Quarry Dust",
-      category: "Aggregate",
-      condition: "New",
-      price: "$18",
-      location: "Norton",
-      distance: "8.5 km",
-      rating: 4.5,
-      co2Saved: "0 kg",
-      imageUrl: "/images/materials/Quarry-dust.jpg",
-    },
-  ];
+  const [materials, setMaterials] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    fetchMaterials();
+  }, []);
+
+  const fetchMaterials = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('materials')
+        .select('*')
+        .eq('status', 'Active')
+        .in('category', ['Bricks', 'Cement', 'Metal', 'Timber', 'Tiles', 'Blocks', 'Plumbing', 'Sand', 'Aggregate'])
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Transform data to match expected format
+      const transformedData = data.map(material => ({
+        id: material.id,
+        title: material.title,
+        category: material.category,
+        condition: material.condition,
+        price: material.price,
+        location: material.location,
+        distance: "5 km", // Placeholder
+        rating: 4.5, // Placeholder
+        co2Saved: "10kg", // Placeholder
+        coordinates: [-17.8252, 31.0335], // Placeholder
+        imageUrl: material.image_url,
+        seller: "Seller", // Would need join with user_profiles
+        verified: true, // Placeholder
+      }));
+
+      setMaterials(transformedData);
+    } catch (error) {
+      console.error('Error fetching materials:', error);
+      toast.error('Failed to load materials');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredMaterials = materials.filter(material =>
+    material.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    material.category.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Fallback to mock data if no real data
+  const displayMaterials = filteredMaterials.length > 0 ? filteredMaterials : [];
 
   return (
     <div className="min-h-screen bg-background">
@@ -116,9 +82,11 @@ const NonMaterials = () => {
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input 
-                  placeholder="Search materials..." 
+                <Input
+                  placeholder="Search materials..."
                   className="pl-10"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
               <Button variant="outline" className="sm:w-auto">
@@ -128,22 +96,27 @@ const NonMaterials = () => {
             </div>
 
             {/* Materials Grid */}
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {materials.map((material, index) => (
-                <MaterialCard key={index} id={`nonmat-${index + 1}`} {...material} />
-              ))}
-            </div>
+            {loading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin" />
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {displayMaterials.map((material, index) => (
+                  <MaterialCard key={material.id || index} {...material} />
+                ))}
+                {displayMaterials.length === 0 && !loading && (
+                  <div className="col-span-full text-center py-12">
+                    <p className="text-muted-foreground">No materials found. Check back later!</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </section>
 
-      <footer className="py-12 border-t border-border mt-20">
-        <div className="container mx-auto px-4">
-          <div className="text-center text-muted-foreground">
-            <p>© 2025 RubbleReuse. Building a sustainable future, one brick at a time.</p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 };

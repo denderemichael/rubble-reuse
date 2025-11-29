@@ -6,56 +6,42 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { MapPin, Shield, Leaf, TrendingUp, Clock, Award } from "lucide-react";
-
 const features = [
   {
-    icon: MapPin,
+    image: "/iconimage/location-removebg-preview.png",
     title: "Location-Based Search",
     description:
       "Find materials near you with our interactive map and radius filters.",
-    color: "text-orange-500",
-    bg: "bg-orange-100",
   },
   {
-    icon: Shield,
+    image: "/iconimage/verified-removebg-preview.png",
     title: "Verified Suppliers",
     description:
       "Trust our rating system with verified profiles and transaction history.",
-    color: "text-green-500",
-    bg: "bg-green-100",
   },
   {
-    icon: Leaf,
+    image: "/iconimage/Metrics1.png",
     title: "Sustainability Metrics",
     description:
       "Track your environmental impact with CO₂ savings and waste diverted.",
-    color: "text-emerald-600",
-    bg: "bg-emerald-100",
   },
   {
-    icon: TrendingUp,
+    image: "/iconimage/pricing-removebg-preview.png",
     title: "Smart Pricing",
     description:
       "Get fair market prices with transparent listings and negotiations.",
-    color: "text-orange-500",
-    bg: "bg-orange-100",
   },
   {
-    icon: Clock,
+    image: "/iconimage/quick-removebg-preview.png",
     title: "Quick Pickup",
     description:
       "Schedule pickups instantly or arrange delivery with our partners.",
-    color: "text-green-500",
-    bg: "bg-green-100",
   },
   {
-    icon: Award,
+    image: "/iconimage/assured-removebg-preview.png",
     title: "Quality Assured",
     description:
       "Detailed photos, condition ratings, and material specifications.",
-    color: "text-gray-700",
-    bg: "bg-gray-100",
   },
 ];
 
@@ -70,8 +56,7 @@ export const Features = () => {
         {/* Section Title */}
         <div className="text-center space-y-6 mb-16">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full text-primary font-medium text-sm">
-            <span>✨</span>
-            Platform Features
+            <span></span>
           </div>
           <h2 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-foreground via-primary to-accent bg-clip-text text-transparent">
             Why Choose RubbleReuse?
@@ -96,10 +81,16 @@ export const Features = () => {
               <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl" />
 
               <CardHeader className="relative z-10 pb-4">
-                <div
-                  className={`w-16 h-16 rounded-2xl ${feature.bg} flex items-center justify-center mb-6 transition-all duration-500 group-hover:scale-110 group-hover:rotate-3 shadow-lg group-hover:shadow-xl`}
-                >
-                  <feature.icon className={`h-8 w-8 ${feature.color} transition-colors duration-300`} />
+                <div className="w-16 h-16 rounded-2xl overflow-hidden mb-6 transition-all duration-500 group-hover:scale-110 group-hover:rotate-3 shadow-lg group-hover:shadow-xl bg-white/80 backdrop-blur-sm">
+                  <img
+                    src={feature.image}
+                    alt={feature.title}
+                    className="w-full h-full object-contain p-2"
+                    onError={(e) => {
+                      // Fallback for broken images
+                      e.currentTarget.src = '/placeholder.svg';
+                    }}
+                  />
                 </div>
                 <CardTitle className="text-xl font-bold text-foreground group-hover:text-primary transition-colors duration-300">
                   {feature.title}
@@ -113,7 +104,7 @@ export const Features = () => {
                 {/* Interactive arrow indicator */}
                 <div className="mt-6 flex items-center justify-end opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-2 group-hover:translate-x-0">
                   <div className="flex items-center gap-2 text-primary font-medium">
-                    <span className="text-sm">Learn more</span>
+                  
                     <svg className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>

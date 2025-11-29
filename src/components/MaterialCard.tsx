@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,8 @@ interface MaterialCardProps {
   co2Saved: string;
   coordinates?: number[];
   imageUrl?: string;
+  seller?: string;
+  verified?: boolean;
 }
 
 export const MaterialCard = ({
@@ -31,6 +34,8 @@ export const MaterialCard = ({
   rating,
   co2Saved,
   imageUrl,
+  seller,
+  verified,
 }: MaterialCardProps) => {
   const [showDetails, setShowDetails] = useState(false);
   const [showContact, setShowContact] = useState(false);
@@ -54,7 +59,8 @@ export const MaterialCard = ({
   return (
     <>
       {/* Material Card */}
-      <Card className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden relative">
+      <Link to={`/product/${id || title.replace(/\s+/g, '-').toLowerCase()}`}>
+        <Card className="group hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden relative cursor-pointer">
         {/* Image */}
         <div className="aspect-video bg-gradient-to-br from-muted to-muted/50 relative overflow-hidden">
           {imageUrl ? (
@@ -71,12 +77,6 @@ export const MaterialCard = ({
               {category}
             </Badge>
           </div>
-          <div className="absolute bottom-4 left-4">
-            <Badge variant="secondary" className="gap-1">
-              <Leaf className="h-3 w-3" />
-              {co2Saved} CO₂ saved
-            </Badge>
-          </div>
         </div>
 
         <CardHeader className="space-y-2">
@@ -86,6 +86,14 @@ export const MaterialCard = ({
               {condition}
             </Badge>
           </div>
+          {seller && (
+            <div className="flex items-center gap-2">
+              <p className="text-sm text-secondary">{seller}</p>
+              {verified && (
+                <Badge className="bg-primary text-primary-foreground text-xs">Verified Seller</Badge>
+              )}
+            </div>
+          )}
           <div className="flex items-center gap-1 text-sm text-muted-foreground">
             <MapPin className="h-4 w-4" />
             <span className="line-clamp-1">{location}</span>
@@ -130,6 +138,7 @@ export const MaterialCard = ({
           </Button>
         </CardFooter>
       </Card>
+      </Link>
 
       {/* Details Modal */}
       {showDetails && (
@@ -155,7 +164,6 @@ export const MaterialCard = ({
             <p><strong>Price:</strong> {price}</p>
             <p><strong>Location:</strong> {location}</p>
             <p><strong>Distance:</strong> {distance}</p>
-            <p><strong>CO₂ Saved:</strong> {co2Saved}</p>
             <p><strong>Rating:</strong> {rating} ⭐</p>
           </div>
         </div>

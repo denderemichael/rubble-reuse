@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
+import Footer from "@/components/Footer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -8,7 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Package, ShoppingBag, Plus, Edit, Trash2, X } from "lucide-react";
+import { Package, ShoppingBag, Plus, Edit, Trash2, X, Upload, ImageIcon, Loader2 } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 // Mock data for user's listings and purchases
 const initialUserListings = [
@@ -71,8 +75,11 @@ const userPurchases = [
 ];
 
 const UserListings = () => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("listings");
-  const [userListings, setUserListings] = useState(initialUserListings);
+  const [userListings, setUserListings] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [showListModal, setShowListModal] = useState(false);
   const [newListing, setNewListing] = useState({
     title: "",
@@ -80,33 +87,113 @@ const UserListings = () => {
     condition: "New",
     price: "",
     location: "",
-    imageUrl: "",
+    description: "",
+    imageFile: null as File | null,
+    imagePreview: "",
   });
 
-  const handleAddListing = () => {
-    if (!newListing.title || !newListing.category || !newListing.price || !newListing.location || !newListing.imageUrl) {
+  useEffect(() => {
+    if (user) {
+      fetchUserListings();
+    }
+  }, [user]);
+
+  const fetchUserListings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('materials')
+        .select('*')
+        .eq('seller_id', user?.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setUserListings(data || []);
+    } catch (error) {
+      console.error('Error fetching listings:', error);
+      toast.error('Failed to load listings');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setNewListing({
+          ...newListing,
+          imageFile: file,
+          imagePreview: e.target?.result as string,
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleAddListing = async () => {
+    if (!user || !newListing.title || !newListing.category || !newListing.price || !newListing.location || !newListing.imageFile) {
+      toast.error('Please fill in all required fields');
       return;
     }
 
-    const listing = {
-      id: (userListings.length + 1).toString(),
-      ...newListing,
-      status: "Active",
-      views: 0,
-      inquiries: 0,
-      listedDate: new Date().toISOString().split('T')[0],
-    };
+    setSaving(true);
+    try {
+      // Upload image to Supabase Storage
+      const fileExt = newListing.imageFile.name.split('.').pop();
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
 
-    setUserListings([...userListings, listing]);
-    setNewListing({
-      title: "",
-      category: "",
-      condition: "New",
-      price: "",
-      location: "",
-      imageUrl: "",
-    });
-    setShowListModal(false);
+      const { error: uploadError } = await supabase.storage
+        .from('material-image')
+        .upload(fileName, newListing.imageFile);
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('material-image')
+        .getPublicUrl(fileName);
+
+      // Save to database
+      const { data, error } = await supabase
+        .from('materials')
+        .insert({
+          title: newListing.title,
+          category: newListing.category,
+          condition: newListing.condition,
+          price: newListing.price,
+          location: newListing.location,
+          description: newListing.description,
+          image_url: urlData.publicUrl,
+          seller_id: user.id,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Update local state
+      setUserListings([data, ...userListings]);
+      toast.success('Material listed successfully!');
+
+      // Reset form
+      setNewListing({
+        title: "",
+        category: "",
+        condition: "New",
+        price: "",
+        location: "",
+        description: "",
+        imageFile: null,
+        imagePreview: "",
+      });
+      setShowListModal(false);
+    } catch (error) {
+      console.error('Error creating listing:', error);
+      toast.error('Failed to create listing');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -209,24 +296,70 @@ const UserListings = () => {
                    />
                  </div>
                  <div className="grid grid-cols-4 items-center gap-4">
-                   <Label htmlFor="imageUrl" className="text-right">
-                     Image URL
+                   <Label htmlFor="description" className="text-right">
+                     Description
                    </Label>
-                   <Input
-                     id="imageUrl"
-                     value={newListing.imageUrl}
-                     onChange={(e) => setNewListing({ ...newListing, imageUrl: e.target.value })}
-                     className="col-span-3"
-                     placeholder="https://example.com/image.jpg"
+                   <textarea
+                     id="description"
+                     value={newListing.description}
+                     onChange={(e) => setNewListing({ ...newListing, description: e.target.value })}
+                     className="col-span-3 px-3 py-2 border border-input rounded-md resize-none"
+                     rows={3}
+                     placeholder="Describe your material..."
                    />
+                 </div>
+                 <div className="grid grid-cols-4 items-center gap-4">
+                   <Label htmlFor="imageFile" className="text-right">
+                     Photo
+                   </Label>
+                   <div className="col-span-3">
+                     <div className="flex items-center gap-2">
+                       <Input
+                         id="imageFile"
+                         type="file"
+                         accept="image/*"
+                         onChange={handleFileChange}
+                         className="hidden"
+                       />
+                       <Label
+                         htmlFor="imageFile"
+                         className="flex items-center gap-2 px-4 py-2 border border-input rounded-md cursor-pointer hover:bg-accent hover:text-accent-foreground"
+                       >
+                         <Upload className="h-4 w-4" />
+                         Choose Photo
+                       </Label>
+                       {newListing.imagePreview && (
+                         <div className="flex items-center gap-2">
+                           <ImageIcon className="h-4 w-4 text-green-500" />
+                           <span className="text-sm text-green-600">Photo selected</span>
+                         </div>
+                       )}
+                     </div>
+                     {newListing.imagePreview && (
+                       <div className="mt-2">
+                         <img
+                           src={newListing.imagePreview}
+                           alt="Preview"
+                           className="w-20 h-20 object-cover rounded-md border"
+                         />
+                       </div>
+                     )}
+                   </div>
                  </div>
                </div>
                <div className="flex justify-end gap-2">
                  <Button variant="outline" onClick={() => setShowListModal(false)}>
                    Cancel
                  </Button>
-                 <Button onClick={handleAddListing} className="bg-gradient-primary">
-                   List Material
+                 <Button onClick={handleAddListing} className="bg-gradient-primary" disabled={saving}>
+                   {saving ? (
+                     <>
+                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                       Creating...
+                     </>
+                   ) : (
+                     'List Material'
+                   )}
                  </Button>
                </div>
              </DialogContent>
@@ -237,7 +370,7 @@ const UserListings = () => {
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="listings" className="flex items-center gap-2">
                 <Package className="h-4 w-4" />
-                My Listings ({userListings.length})
+                My Listings ({loading ? '...' : userListings.length})
               </TabsTrigger>
               <TabsTrigger value="purchases" className="flex items-center gap-2">
                 <ShoppingBag className="h-4 w-4" />
@@ -246,14 +379,22 @@ const UserListings = () => {
             </TabsList>
 
             <TabsContent value="listings" className="space-y-6">
-              <div className="grid gap-6">
-                {userListings.map((listing) => (
+              {loading ? (
+                <div className="flex justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+                </div>
+              ) : (
+                <div className="grid gap-6">
+                  {userListings.map((listing) => (
                   <Card key={listing.id}>
                     <CardContent className="p-6">
                       <div className="flex items-start justify-between">
                         <div className="flex gap-4">
-                          {/* Image Placeholder */}
-                          <div className="w-20 h-20 bg-muted rounded-lg flex-shrink-0"></div>
+                          <img
+                            src={listing.image_url}
+                            alt={listing.title}
+                            className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
+                          />
 
                           {/* Listing Details */}
                           <div className="flex-1">
@@ -270,7 +411,7 @@ const UserListings = () => {
                               <Badge variant="outline">{listing.category}</Badge>
                               <Badge variant="secondary">{listing.condition}</Badge>
                               <span>{listing.location}</span>
-                              <span>Listed: {listing.listedDate}</span>
+                              <span>Listed: {new Date(listing.created_at).toLocaleDateString()}</span>
                             </div>
 
                             <div className="flex items-center gap-6 text-sm">
@@ -297,22 +438,20 @@ const UserListings = () => {
                   </Card>
                 ))}
 
-                {userListings.length === 0 && (
-                  <Card>
-                    <CardContent className="p-12 text-center">
-                      <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                      <h3 className="text-lg font-semibold mb-2">No listings yet</h3>
-                      <p className="text-muted-foreground mb-4">
-                        Start selling your construction materials and help reduce waste.
-                      </p>
-                      <Button className="bg-gradient-primary">
-                        <Plus className="h-4 w-4 mr-2" />
-                        List Your First Material
-                      </Button>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
+                    {userListings.length === 0 && (
+                      <Card>
+                        <CardContent className="p-12 text-center">
+                          <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                          <h3 className="text-lg font-semibold mb-2">No listings yet</h3>
+                          <p className="text-muted-foreground mb-4">
+                            Start selling your construction materials and help reduce waste.
+                          </p>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
+                )
+              }
             </TabsContent>
 
             <TabsContent value="purchases" className="space-y-6">
@@ -382,6 +521,7 @@ const UserListings = () => {
           </Tabs>
         </div>
       </div>
+      <Footer />
     </div>
   );
 };

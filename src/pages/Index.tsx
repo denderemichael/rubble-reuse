@@ -6,6 +6,7 @@ import { MaterialCard } from "@/components/MaterialCard";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import Footer from "@/components/Footer";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -196,17 +197,7 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="py-12 border-t border-border">
-        <div className="container mx-auto px-4">
-          <div className="text-center text-muted-foreground">
-            <p>
-              © 2025 RubbleReuse. Building a sustainable future, one brick at a
-              time.
-            </p>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 };
