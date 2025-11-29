@@ -35,7 +35,7 @@ export default function Footer() {
           </div>
         </div>
         <div className="border-t border-gray-600 mt-8 pt-8 text-center text-sm text-gray-300">
-          <p>&copy; 2024 Rubble Reuse. All rights reserved.</p>
+          <p>&copy; 2025 Rubble Reuse. All rights reserved.</p>
         </div>
       </div>
     </footer>
